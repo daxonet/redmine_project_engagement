@@ -1,0 +1,7 @@
+<h2><%= l(:label_engagement_contract_new) %></h2>
+
+<%= form_for @engagement_contract, url: project_engagement_contracts_path(@project), method: :post do |f| %>
+  <%= render partial: 'form', locals: { f: f } %>
+  <%= submit_tag l(:button_create) %>
+  <%= link_to l(:button_cancel), project_engagement_contracts_list_path(@project) %>
+<% end %>

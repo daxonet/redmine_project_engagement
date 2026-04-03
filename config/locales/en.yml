@@ -1,0 +1,50 @@
+en:
+  label_engagement_contracts: "Engagement Contracts"
+  label_engagement_contract: "Engagement Contract"
+  label_engagement_contract_new: "New Engagement Contract"
+  label_engagement_contract_edit: "Edit Engagement Contract"
+  label_version_edit: "Edit Version"
+  label_assign_existing_version: "Assign existing version"
+  label_select_version: "Select a version"
+  label_no_available_versions: "All versions are already assigned."
+  label_engagement_summary: "Engagement Summary"
+  label_dashboard: "Dashboard"
+  notice_dashboard_link_reset: "Public dashboard link has been reset. Old links will no longer work."
+  notice_link_copied: "Link copied!"
+
+  label_share_link: "Share"
+  label_share_dashboard: "Share Dashboard Link"
+  label_public_url: "Public URL"
+  label_link_generated_at: "Link generated"
+  label_unknown: "Unknown"
+
+  text_share_warning: "This link allows anyone to view the dashboard without logging in. Share with caution."
+  text_reset_link_confirm: "Reset the share link? All existing shared links will stop working."
+
+  button_copy_link: "Copy Link"
+  button_reset_link: "Reset Link"
+  label_open: "Open"
+  label_closed: "Closed"
+
+  field_contract_number: "Contract Number"
+  field_contract_hours: "Contract Hours"
+  field_contract_date: "Contract Date"
+  field_version_type: "Type"
+  field_version_sub_type: "Sub Type"
+  field_planned_start_date: "Start Date"
+
+  text_contract_hours_info: "Displayed as hours / mandays (1 manday = 8 hours)"
+
+  notice_version_added: "Version '%{version}' has been added."
+  notice_version_removed: "Version '%{version}' has been removed."
+  error_version_already_assigned: "Version '%{version}' is already assigned to another Engagement Contract."
+
+  button_remove_version: "Remove"
+
+  permission_view_engagement_contracts: "View engagement contracts"
+  permission_view_engagement_dashboard: "View dashboard"
+  permission_share_engagement_dashboard: "Share dashboard link"
+  permission_manage_engagement_contracts: "Manage engagement contracts"
+  permission_manage_engagement_contract_versions: "Manage engagement contract versions"
+
+  project_module_project_engagement: "Project Engagement"

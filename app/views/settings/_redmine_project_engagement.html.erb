@@ -1,0 +1,86 @@
+<div class="box tabular">
+  <p>
+    <label>Customization Tracker</label>
+    <%= select_tag 'settings[customization_tracker_id]',
+          options_from_collection_for_select(Tracker.sorted, :id, :name, @settings['customization_tracker_id'].to_i),
+          include_blank: '-- Select --' %>
+    <em class="info">Tracker used for Change Requests / Customizations</em>
+  </p>
+  <p>
+    <label>Customization Subtask Tracker</label>
+    <%= select_tag 'settings[customization_subtask_tracker_id]',
+          options_from_collection_for_select(Tracker.sorted, :id, :name, @settings['customization_subtask_tracker_id'].to_i),
+          include_blank: '-- Select --' %>
+    <em class="info">Tracker for auto-created stage subtasks</em>
+  </p>
+  <p>
+    <label>Stage Field</label>
+    <%= select_tag 'settings[stage_field_id]',
+          options_from_collection_for_select(
+            CustomField.where(type: 'IssueCustomField').order(:position),
+            :id, :name, @settings['stage_field_id'].to_i),
+          include_blank: '-- Select --' %>
+    <em class="info">List field for CR stage</em>
+  </p>
+  <p>
+    <label style="vertical-align:top;">Stage Subtask List</label>
+    <%
+      stage_field = CustomField.find_by(id: @settings['stage_field_id'].to_i)
+      possible_stages = stage_field ? stage_field.possible_values : []
+      selected_stages = Array(@settings['stage_subtask_list'])
+    %>
+    <% if possible_stages.any? %>
+      <span style="display:inline-block; vertical-align:top;">
+        <% possible_stages.each do |stage| %>
+          <label style="display:block; margin:1px 0; font-weight:normal; width:auto; text-align:left; float:none;">
+            <%= check_box_tag 'settings[stage_subtask_list][]', stage, selected_stages.include?(stage) %>
+            <%= stage %>
+          </label>
+        <% end %>
+      </span>
+      <%= hidden_field_tag 'settings[stage_subtask_list][]', '' %>
+    <% else %>
+      <em class="info">Select a Stage Field first, then save to see available stages.</em>
+    <% end %>
+    <br clear="all" />
+    <em class="info" style="margin-left:170px;">Selected stages will auto-create subtasks when a Customization issue is created.</em>
+  </p>
+  <p>
+    <label style="vertical-align:top;">Dashboard Logo</label>
+    <%
+      logo_file = Dir.glob(File.join(Rails.root, 'files', 'engagement_plugin', 'dashboard_logo.*')).first
+      has_logo = logo_file.present? && File.exist?(logo_file)
+    %>
+    <span style="display:inline-block; vertical-align:top;">
+      <% if has_logo %>
+        <img src="/engagement_dashboard_logo?t=<%= File.mtime(logo_file).to_i %>" style="max-height:40px; background:#1a1f35; padding:4px 8px; border-radius:4px; display:block; margin-bottom:6px;" />
+      <% end %>
+      <input type="file" id="logo-file-input" accept="image/png,image/jpeg,image/svg+xml" />
+      <button type="button" onclick="uploadLogo()" style="margin-left:4px;">Upload</button>
+      <% if has_logo %>
+        <button type="button" onclick="deleteLogo()" style="margin-left:4px; color:#c00;">Remove</button>
+      <% end %>
+      <em class="info" style="display:block; margin-top:4px;">PNG with transparent background recommended.</em>
+    </span>
+  </p>
+</div>
+
+<script>
+function uploadLogo() {
+  var input = document.getElementById('logo-file-input');
+  if (!input.files.length) { alert('Please select a file.'); return; }
+  var fd = new FormData();
+  fd.append('logo', input.files[0]);
+  fd.append('authenticity_token', '<%= form_authenticity_token %>');
+  fetch('/engagement_dashboard_logo', { method: 'POST', body: fd })
+    .then(function(r) { if (r.ok) location.reload(); else alert('Upload failed'); });
+}
+function deleteLogo() {
+  if (!confirm('Remove the dashboard logo?')) return;
+  var fd = new FormData();
+  fd.append('delete', '1');
+  fd.append('authenticity_token', '<%= form_authenticity_token %>');
+  fetch('/engagement_dashboard_logo', { method: 'POST', body: fd })
+    .then(function(r) { if (r.ok) location.reload(); else alert('Delete failed'); });
+}
+</script>

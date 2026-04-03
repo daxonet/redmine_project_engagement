@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= @project.name %> - Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+<%= render partial: 'engagement_dashboard/dashboard_styles' %>
+  </style>
+</head>
+<body>
+<div class="dashboard-wrap">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <%
+      logo_file = Dir.glob(File.join(Rails.root, 'files', 'engagement_plugin', 'dashboard_logo.*')).first
+      has_logo = logo_file.present? && File.exist?(logo_file)
+    %>
+    <% if has_logo %>
+    <div class="logo-area">
+      <img src="/engagement_dashboard_logo" style="max-height:44px;" />
+    </div>
+    <% end %>
+    <div class="title-area">
+      <div class="title-main">
+        <%= @project.name %><% if @data[:project][:subject] %> &mdash; <%= @data[:project][:subject] %><% end %>
+      </div>
+    </div>
+  </div>
+  <div class="header-kpis">
+    <% if @data[:kpis][:go_live_days] %>
+    <div class="hkpi">
+      <div class="hkpi-value accent"><%= @data[:kpis][:go_live_days] %><span class="hkpi-unit">DAYS</span></div>
+      <div class="hkpi-label">GO-LIVE</div>
+    </div>
+    <% end %>
+    <div class="hkpi">
+      <div class="hkpi-value cyan"><%= @data[:kpis][:total_open] %></div>
+      <div class="hkpi-label">OPEN</div>
+    </div>
+    <div class="hkpi">
+      <div class="hkpi-value red"><%= @data[:kpis][:overdue] %></div>
+      <div class="hkpi-label">OVERDUE</div>
+    </div>
+    <div class="hkpi">
+      <div class="hkpi-value yellow"><%= @data[:kpis][:waiting] %></div>
+      <div class="hkpi-label">WAITING</div>
+    </div>
+    <div class="hkpi">
+      <div class="hkpi-value green"><%= @data[:kpis][:resolved] %></div>
+      <div class="hkpi-label">RESOLVED</div>
+    </div>
+    <div class="hkpi clock-kpi">
+      <div class="hkpi-value clock" id="clock-time">--:--</div>
+      <div class="hkpi-label" id="clock-date">---</div>
+    </div>
+  </div>
+</div>
+
+<!-- PHASE TIMELINE -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-title">PROJECT MILESTONES</span>
+    <span class="section-meta"><%= @data[:kpis][:overall_progress] %>% Overall</span>
+  </div>
+  <div class="phase-bar">
+    <%
+       main_phases = @data[:phases].reject { |p| p[:milestone_type] == 'New-Scope' }
+       total_days = 0
+       main_phases.each do |p|
+         if p[:start_date] && p[:due_date]
+           total_days += (Date.parse(p[:due_date]) - Date.parse(p[:start_date])).to_i rescue 0
+         end
+       end
+       total_days = 1 if total_days == 0
+    %>
+    <% main_phases.each do |phase| %>
+      <%
+        days = 0
+        if phase[:start_date] && phase[:due_date]
+          days = (Date.parse(phase[:due_date]) - Date.parse(phase[:start_date])).to_i rescue 0
+        end
+        width_pct = (days.to_f / total_days * 100).round(1)
+        width_pct = 8 if width_pct < 8
+      %>
+      <div class="phase-block <%= phase[:status] %>" style="flex: <%= width_pct %>;">
+        <div class="phase-progress-bg" style="width: <%= phase[:progress] %>%"></div>
+        <div class="phase-content">
+          <div class="phase-top">
+            <% if phase[:status] == 'done' %>
+              <span class="phase-check">&#10003;</span>
+            <% end %>
+            <span class="phase-name"><%= phase[:subject].gsub(/^Phase \d+:\s*/, '') %></span>
+            <span class="phase-pct"><%= phase[:progress] %>%</span>
+          </div>
+          <div class="phase-dates-row">
+            <% if phase[:start_date] %>
+              <%= Date.parse(phase[:start_date]).strftime('%b %y') rescue '' %> - <%= Date.parse(phase[:due_date]).strftime('%b %y') rescue '' %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- MIDDLE ROW: 3 columns -->
+<div class="mid-row">
+
+  <!-- LEFT: Previous / Current / Next Milestone cards -->
+  <div class="mid-left">
+    <% @data[:milestone_cards].each do |card| %>
+    <div class="card <%= 'card-current' if card[:label] == 'CURRENT' %>">
+      <div class="card-header">
+        <span class="card-icon"><% if card[:label] == 'CURRENT' %>&#9654;<% elsif card[:label] == 'PREVIOUS' %>&#9664;<% else %>&#9654;&#9654;<% end %></span>
+        <span class="card-title"><%= card[:label] %> &mdash; <%= card[:phase][:subject] %></span>
+        <% if card[:phase][:due_date] %>
+          <%
+            due = Date.parse(card[:phase][:due_date])
+            days_left = (due - Date.today).to_i
+          %>
+          <% if days_left < 0 %>
+            <span class="card-badge" style="background:rgba(255,68,68,0.2); color:#ff4444;">Overdue <%= -days_left %>d</span>
+          <% elsif days_left == 0 %>
+            <span class="card-badge" style="background:rgba(255,215,0,0.2); color:#ffd700;">Due today</span>
+          <% else %>
+            <span class="card-badge"><%= days_left %>d left</span>
+          <% end %>
+          <span class="card-badge" style="opacity:0.6;"><%= due.strftime('%d-%b-%y') %></span>
+        <% end %>
+        <span class="card-badge"><%= card[:phase][:progress] %>%</span>
+      </div>
+      <% if card[:tasks].any? %>
+      <div class="card-body">
+          <% card[:tasks].each do |task| %>
+          <div class="sub-item">
+            <div class="sub-label">
+              <% if task[:status] %>
+                <span class="stage-badge <%= task[:status].downcase.gsub(/\s+/,'') %>"><%= task[:status] %></span>
+              <% end %>
+              <%= task[:subject] %>
+            </div>
+            <div class="sub-bar-row">
+              <div class="sub-bar">
+                <div class="sub-bar-fill" style="width: <%= task[:progress] %>%"></div>
+              </div>
+              <span class="sub-pct"><%= task[:progress] %>%</span>
+              <span class="sub-assignee"><%= task[:assignee] %></span>
+            </div>
+          </div>
+          <% end %>
+      </div>
+      <% end %>
+    </div>
+    <% end %>
+  </div>
+
+  <!-- CENTER: Milestones -->
+  <div class="mid-center">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">MILESTONES</span>
+      </div>
+      <div class="card-body milestones-list">
+        <% @data[:milestones].each_with_index do |ms, idx| %>
+        <div class="ms-item">
+          <div class="ms-dot-col">
+            <div class="ms-dot <%= ms[:status] %>"></div>
+            <% unless idx == @data[:milestones].length - 1 %>
+              <div class="ms-line"></div>
+            <% end %>
+          </div>
+          <div class="ms-info">
+            <div class="ms-name <% if ms[:status] == 'done' %>ms-done<% end %>">
+              <%= ms[:subject] %>
+            </div>
+            <div class="ms-sub"><%= ms[:progress] %>%</div>
+          </div>
+          <div class="ms-date">
+            <% if ms[:due_date] && ms[:status] != 'done' %>
+              <%= Date.parse(ms[:due_date]).strftime('%d-%b-%y') rescue '' %>
+            <% end %>
+          </div>
+        </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Tracker donut + Customization Status donut -->
+  <div class="mid-right">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">TRACKER</span>
+      </div>
+      <div class="card-body tracker-chart-area">
+        <canvas id="trackerChart"></canvas>
+        <div class="tracker-legend" id="trackerLegend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">CUSTOMIZATION STATUS</span>
+      </div>
+      <div class="card-body">
+        <div class="cm-chart-row">
+          <div class="cm-chart-wrap">
+            <canvas id="custStatusChart"></canvas>
+          </div>
+          <div class="cm-legend" id="custStatusLegend"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM ROW: Time + CRs -->
+<div class="bot-row">
+
+  <!-- LEFT: Team Hours -->
+  <div class="bot-left">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">TIME SPENT</span>
+        <span class="card-badge"><%= @data[:team_hours][:total] %> hrs / <%= (@data[:team_hours][:total] / 8.0).round(1) %> MD</span>
+      </div>
+      <div class="card-body">
+        <div class="team-chart-area">
+          <canvas id="teamChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Active CRs -->
+  <div class="bot-right">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">ACTIVE CHANGE REQUESTS</span>
+        <span class="card-badge"><%= @data[:active_crs].length %></span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="cr-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>SUBJECT</th>
+              <th>OWNER</th>
+              <th>STAGE</th>
+              <th>DUE</th>
+              <th>PROGRESS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @data[:active_crs].each do |cr| %>
+            <tr>
+              <td><%= cr[:id] %></td>
+              <td class="subject-cell" title="<%= cr[:subject] %>"><%= cr[:subject] %></td>
+              <td><%= cr[:assignee] %></td>
+              <td><span class="stage-badge <%= cr[:stage].downcase.gsub(/\s+/,'') %>"><%= cr[:stage] %></span></td>
+              <td class="mono <%= cr[:is_overdue] ? 'overdue' : '' %>">
+                <% if cr[:due_date] %>
+                  <% if cr[:is_overdue] %>&uarr;<% end %>
+                  <%= Date.parse(cr[:due_date]).strftime('%d %b') rescue cr[:due_date] %>
+                <% else %>
+                  &mdash;
+                <% end %>
+              </td>
+              <td>
+                <div class="progress-cell">
+                  <div class="mini-bar"><div class="mini-fill" style="width:<%= cr[:progress] %>%"></div></div>
+                  <span class="mono"><%= cr[:progress] %>%</span>
+                </div>
+              </td>
+            </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /dashboard-wrap -->
+
+<script>
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock-time').textContent =
+    now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('clock-date').textContent =
+    now.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+      .toUpperCase();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+Chart.defaults.color = '#6080a0';
+Chart.defaults.font.family = "'Rajdhani', sans-serif";
+Chart.defaults.font.weight = '500';
+
+// Tracker Donut
+const tData = <%= raw @data[:tracker_breakdown].to_json %>;
+const tColors = ['#00d4ff', '#ff6eb4', '#8090b0'];
+const tTotal = tData.reduce((s,t) => s + t.count, 0);
+
+if (document.getElementById('trackerChart') && tData.length > 0) {
+  new Chart(document.getElementById('trackerChart'), {
+    type: 'doughnut',
+    data: {
+      labels: tData.map(t => t.name),
+      datasets: [{
+        data: tData.map(t => t.count),
+        backgroundColor: tColors.slice(0, tData.length),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#1a1f35', borderColor: '#2a3050', borderWidth: 1 }
+      }
+    },
+    plugins: [{
+      id: 'centerText',
+      afterDraw(chart) {
+        const { ctx, chartArea: { width, height, top, left } } = chart;
+        ctx.save();
+        ctx.font = "900 28px 'Orbitron'";
+        ctx.fillStyle = '#e0e8ff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tTotal, left + width/2, top + height/2);
+        ctx.restore();
+      }
+    }]
+  });
+
+  const legendEl = document.getElementById('trackerLegend');
+  tData.forEach((t, i) => {
+    legendEl.innerHTML += '<div class="tl-item"><span class="tl-dot" style="background:' + tColors[i] + '"></span><span class="tl-name">' + t.name + '</span><span class="tl-val">' + t.count + '</span></div>';
+  });
+}
+
+// Customization Status Donut
+const csData = <%= raw @data[:customization_status].to_json %>;
+const csLabels = Object.keys(csData);
+const csValues = Object.values(csData);
+const csColors = { Backlog:'#8090b0', Design:'#aa66ff', Develop:'#00d4ff', Testing:'#ffd700', Deploy:'#00ff88' };
+const csTotal = csValues.reduce((s,v) => s+v, 0);
+
+if (document.getElementById('custStatusChart') && csTotal > 0) {
+  new Chart(document.getElementById('custStatusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: csLabels,
+      datasets: [{
+        data: csValues,
+        backgroundColor: csLabels.map(l => (csColors[l]||'#8090b0') + 'cc'),
+        borderColor: csLabels.map(l => csColors[l]||'#8090b0'),
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#1a1f35', borderColor: '#2a3050', borderWidth: 1 }
+      }
+    },
+    plugins: [{
+      id: 'csCenter',
+      afterDraw(chart) {
+        const { ctx, chartArea: { width, height, top, left } } = chart;
+        ctx.save();
+        ctx.font = "900 26px 'Orbitron'";
+        ctx.fillStyle = '#e0e8ff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(csTotal, left + width/2, top + height/2);
+        ctx.restore();
+      }
+    }]
+  });
+
+  const csLeg = document.getElementById('custStatusLegend');
+  csLabels.forEach((l, i) => {
+    csLeg.innerHTML += '<div class="tl-item"><span class="tl-dot" style="background:' + (csColors[l]||'#8090b0') + '"></span><span class="tl-name">' + l + '</span><span class="tl-val">' + csValues[i] + '</span></div>';
+  });
+}
+
+// Weekly Time Spent (stacked: Task vs CR)
+const weeks = <%= raw @data[:team_hours][:weeks].to_json %>;
+const totalTask = <%= @data[:team_hours][:total_task] %>;
+const totalCR = <%= @data[:team_hours][:total_cr] %>;
+new Chart(document.getElementById('teamChart'), {
+  type: 'bar',
+  data: {
+    labels: weeks.map(w => w.label),
+    datasets: [
+      {
+        label: 'Task (' + totalTask.toFixed(1) + 'h / ' + (totalTask/8).toFixed(1) + 'MD)',
+        data: weeks.map(w => w.task),
+        backgroundColor: 'rgba(0,212,255,0.5)',
+        borderColor: '#00d4ff',
+        borderWidth: 1, borderRadius: 2
+      },
+      {
+        label: 'CR (' + totalCR.toFixed(1) + 'h / ' + (totalCR/8).toFixed(1) + 'MD)',
+        data: weeks.map(w => w.cr),
+        backgroundColor: 'rgba(255,105,180,0.5)',
+        borderColor: '#ff69b4',
+        borderWidth: 1, borderRadius: 2
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true, position: 'top',
+        labels: { usePointStyle: true, pointStyle: 'rect', padding: 12,
+                  font: { size: 11, family: "'JetBrains Mono'" } }
+      }
+    },
+    scales: {
+      y: { beginAtZero: true, stacked: true, grid: { color: '#1a2540' }, ticks: { callback: v => v + 'h', font: { size: 11 } } },
+      x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9, family: "'JetBrains Mono'" }, maxRotation: 45 } }
+    }
+  }
+});
+
+// Auto-refresh every 5 min
+setInterval(() => location.reload(), 5 * 60 * 1000);
+</script>
+</body>
+</html>

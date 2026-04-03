@@ -1,0 +1,51 @@
+<%= back_url_hidden_field_tag %>
+<%= error_messages_for 'version' %>
+
+<div class="box tabular">
+<p><%= f.text_field :name, :maxlength => 60, :size => 60, :required => true %></p>
+<p><%= f.text_field :description, :size => 60 %></p>
+<% unless @version.new_record? %>
+  <p><%= f.select :status, Version::VERSION_STATUSES.collect {|s| [l("version_status_#{s}"), s]} %></p>
+<% end %>
+<p><%= f.text_field :wiki_page_title, :label => :label_wiki_page, :size => 60, :disabled => @project.wiki.nil? %></p>
+<p><%= f.date_field :effective_date, :size => 10 %><%= calendar_for('version_effective_date') %></p>
+<p><%= f.select :sharing, @version.allowed_sharings.collect {|v| [format_version_sharing(v), v]} %></p>
+<% if @version.new_record? %>
+<p><%= f.check_box :default_project_version, :label => :field_default_version %></p>
+<% end %>
+
+<% @version.visible_custom_field_values.each do |value| %>
+  <p><%= custom_field_tag_with_label :version, value %></p>
+<% end %>
+
+<% if @project.module_enabled?(:project_engagement) %>
+  <hr />
+  <p>
+    <label for="version_version_type"><%= l(:field_version_type) %></label>
+    <%= f.select :version_type, [['', ''], ['Sprint', 'Sprint'], ['Milestone', 'Milestone']], {}, { id: 'version_version_type', onchange: 'toggleSubType()' } %>
+  </p>
+  <p id="sub_type_field" style="<%= @version.version_type == 'Milestone' ? '' : 'display:none;' %>">
+    <label for="version_version_sub_type"><%= l(:field_version_sub_type) %></label>
+    <%= f.select :version_sub_type, [['', ''], ['Customization', 'Customization'], ['Go-Live', 'Go-Live'], ['Post-Live-Support', 'Post-Live-Support'], ['Additional-Scope', 'Additional-Scope'], ['Project-Management', 'Project-Management']] %>
+  </p>
+  <p>
+    <label for="version_planned_start_date"><%= l(:field_planned_start_date) %></label>
+    <%= f.date_field :planned_start_date %>
+  </p>
+
+  <%= javascript_tag do %>
+    function toggleSubType() {
+      var versionType = document.getElementById('version_version_type').value;
+      var subTypeField = document.getElementById('sub_type_field');
+      if (versionType === 'Milestone') {
+        subTypeField.style.display = '';
+      } else {
+        subTypeField.style.display = 'none';
+        var subTypeSelect = document.getElementById('version_version_sub_type');
+        if (subTypeSelect) subTypeSelect.value = '';
+      }
+    }
+  <% end %>
+<% end %>
+
+</div>

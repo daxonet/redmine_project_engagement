@@ -1,0 +1,36 @@
+<h2><%= l(:label_engagement_contracts) %></h2>
+
+<% if User.current.allowed_to?(:manage_engagement_contracts, @project) %>
+  <p class="contextual">
+    <%= link_to l(:label_engagement_contract_new), new_project_engagement_contract_path(@project), class: 'icon icon-add' %>
+  </p>
+<% end %>
+
+<% if @engagement_contracts.any? %>
+  <table class="list">
+    <thead>
+      <tr>
+        <th><%= l(:field_name) %></th>
+        <th><%= l(:field_contract_number) %></th>
+        <th><%= l(:field_contract_hours) %></th>
+        <th><%= l(:field_contract_date) %></th>
+        <th><%= l(:field_status) %></th>
+        <th><%= l(:label_version_plural) %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @engagement_contracts.each do |engagement_contract| %>
+        <tr class="<%= engagement_contract.closed? ? 'closed' : '' %>">
+          <td><%= link_to engagement_contract.name, project_engagement_contract_path(@project, engagement_contract) %></td>
+          <td><%= engagement_contract.contract_number %></td>
+          <td><%= format_contract_hours(engagement_contract.contract_hours) %></td>
+          <td><%= format_date(engagement_contract.contract_date) %></td>
+          <td><%= engagement_contract_status_label(engagement_contract.status) %></td>
+          <td><%= engagement_contract.versions.count %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p class="nodata"><%= l(:label_no_data) %></p>
+<% end %>

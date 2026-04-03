@@ -1,0 +1,198 @@
+<% @engagement_contract.ensure_dashboard_secret %>
+<% public_token = EngagementDashboardController.generate_token(@project.identifier, @engagement_contract) %>
+<% public_url = engagement_dashboard_public_url(@project.identifier, @engagement_contract.id, public_token) %>
+
+<div class="contextual">
+  <% if User.current.allowed_to?(:view_engagement_dashboard, @project) %>
+    <%= link_to l(:label_dashboard), dashboard_project_engagement_contract_path(@project, @engagement_contract),
+                target: '_blank', class: 'icon icon-stats' %>
+  <% end %>
+  <% if User.current.allowed_to?(:share_engagement_dashboard, @project) %>
+    <a href="#" onclick="openShareDialog(); return false;" style="display:inline-block; background:#3b82f6; color:#fff; border-radius:4px; padding:3px 12px; font-size:11px; font-weight:600; text-decoration:none;"><%= l(:label_share_link) %></a>
+  <% end %>
+  <% if User.current.allowed_to?(:manage_engagement_contract_versions, @project) %>
+    <%= link_to l(:label_version_new), new_project_engagement_contract_version_path(@project, @engagement_contract), class: 'icon icon-add' %>
+  <% end %>
+  <% if User.current.allowed_to?(:manage_engagement_contracts, @project) %>
+    <%= link_to l(:button_edit), edit_project_engagement_contract_path(@project, @engagement_contract), class: 'icon icon-edit' %>
+    <%= link_to l(:button_delete), project_engagement_contract_path(@project, @engagement_contract),
+                method: :delete,
+                data: { confirm: l(:text_are_you_sure) },
+                class: 'icon icon-del' %>
+  <% end %>
+</div>
+
+<!-- Share Dialog -->
+<div id="share-dialog" onclick="if(event.target===this) this.style.display='none';"
+     style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.25); padding:24px; width:520px; max-width:90vw;">
+    <h3 style="margin:0 0 12px; font-size:16px;"><%= l(:label_share_dashboard) %></h3>
+    <p style="background:#fff8e1; border:1px solid #ffe082; border-radius:4px; padding:8px 12px; font-size:12px; color:#8d6e00; margin-bottom:16px;">
+      <%= l(:text_share_warning) %>
+    </p>
+
+    <label style="font-size:12px; font-weight:bold; color:#555;"><%= l(:label_public_url) %></label>
+    <div style="display:flex; gap:8px; margin:4px 0 4px;">
+      <input type="text" id="share-url-input" value="<%= public_url %>" readonly
+             style="flex:1; padding:6px 10px; border:1px solid #d0d0d0; border-radius:4px; font-size:12px; font-family:monospace; background:#f8f8f8; color:#333;"
+             onclick="this.select();" />
+      <button type="button" onclick="copyShareUrl()" style="padding:6px 14px; background:#3b82f6; color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer;"><%= l(:button_copy_link) %></button>
+    </div>
+    <span id="copy-toast" style="display:none; font-size:11px; color:#2e7d32; font-weight:600;"></span>
+
+    <p style="font-size:12px; color:#888; margin:12px 0;">
+      <% if @engagement_contract.dashboard_secret_created_at %>
+        <%= l(:label_link_generated_at) %>: <strong><%= format_time(@engagement_contract.dashboard_secret_created_at) %></strong>
+      <% else %>
+        <%= l(:label_link_generated_at) %>: <strong><%= l(:label_unknown) %></strong>
+      <% end %>
+    </p>
+
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:12px; border-top:1px solid #eee;">
+      <%= link_to l(:button_reset_link), reset_dashboard_link_project_engagement_contract_path(@project, @engagement_contract),
+                  method: :post,
+                  data: { confirm: l(:text_reset_link_confirm) },
+                  style: 'background:#ef4444; color:#fff; border:none; border-radius:4px; padding:6px 14px; font-size:12px; cursor:pointer; text-decoration:none;' %>
+      <button type="button" onclick="document.getElementById('share-dialog').style.display='none';"
+              style="padding:6px 14px; background:#e5e7eb; color:#333; border:none; border-radius:4px; font-size:12px; cursor:pointer;"><%= l(:button_close) %></button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openShareDialog() {
+  var d = document.getElementById('share-dialog');
+  d.style.display = 'flex';
+}
+function copyShareUrl() {
+  var input = document.getElementById('share-url-input');
+  input.select();
+  navigator.clipboard.writeText(input.value).then(function() {
+    var toast = document.getElementById('copy-toast');
+    toast.textContent = '<%= j l(:notice_link_copied) %>';
+    toast.style.display = 'inline';
+    setTimeout(function() { toast.style.display = 'none'; }, 2000);
+  });
+}
+</script>
+
+<h2><%= @engagement_contract.name %></h2>
+
+<div class="splitcontent">
+  <div class="splitcontentleft">
+    <ul class="details">
+      <li><strong><%= l(:field_contract_number) %>:</strong> <%= @engagement_contract.contract_number.present? ? @engagement_contract.contract_number : '-' %></li>
+      <li><strong><%= l(:field_contract_hours) %>:</strong> <%= format_contract_hours(@engagement_contract.contract_hours) %></li>
+    </ul>
+  </div>
+  <div class="splitcontentright">
+    <ul class="details">
+      <li><strong><%= l(:field_contract_date) %>:</strong> <%= @engagement_contract.contract_date ? format_date(@engagement_contract.contract_date) : '-' %></li>
+      <li><strong><%= l(:field_status) %>:</strong> <%= engagement_contract_status_label(@engagement_contract.status) %></li>
+    </ul>
+  </div>
+</div>
+
+<% if @engagement_contract.description.present? %>
+  <div class="wiki"><%= textilizable(@engagement_contract.description) %></div>
+<% end %>
+
+<% if User.current.allowed_to?(:manage_engagement_contracts, @project) %>
+  <div class="box" style="margin-top:10px;">
+    <%= form_tag(add_version_project_engagement_contract_path(@project, @engagement_contract), method: :post, style: 'display:inline') do %>
+      <label><%= l(:label_assign_existing_version) %>:</label>
+      <% if @available_versions.any? %>
+        <%= select_tag :version_id, options_from_collection_for_select(@available_versions, :id, :name), prompt: "-- #{l(:label_select_version)} --" %>
+        <%= submit_tag l(:button_add), class: 'btn btn-small' %>
+      <% else %>
+        <em class="info"><%= l(:label_no_available_versions) %></em>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if @versions.any? %>
+  <div id="roadmap">
+    <% @versions.each do |version| %>
+      <article class="version-article">
+        <div class="contextual">
+          <% if User.current.allowed_to?(:manage_engagement_contract_versions, @project) %>
+            <%= link_to l(:button_edit), edit_project_engagement_contract_version_path(@project, @engagement_contract, version), class: 'icon icon-edit' %>
+          <% end %>
+          <% if User.current.allowed_to?(:manage_engagement_contracts, @project) %>
+            <%= link_to l(:button_remove_version), remove_version_project_engagement_contract_path(@project, @engagement_contract, version_id: version.id),
+                        method: :delete,
+                        data: { confirm: l(:text_are_you_sure) },
+                        class: 'icon icon-del' %>
+          <% end %>
+        </div>
+
+        <header>
+          <h3 class="version inline-flex">
+            <%= link_to version.name, version_path(version) %>
+            <% if version.version_type.present? %>
+              &nbsp;<span class="badge badge-type"><%= version_type_label(version) %></span>
+            <% end %>
+          </h3>
+          <span class="badge badge-status-<%= version.status %>"><%= l("version_status_#{version.status}") %></span>
+        </header>
+
+        <div class="version-overview">
+          <% if version.planned_start_date.present? || version.effective_date.present? %>
+            <p>
+              <% if version.planned_start_date.present? %>
+                <%= format_date(version.planned_start_date) %>
+              <% end %>
+              <% if version.planned_start_date.present? && version.effective_date.present? %>
+                &#8594;
+              <% end %>
+              <% if version.effective_date.present? %>
+                <strong><%= format_date(version.effective_date) %></strong>
+                <% unless version.completed? %>
+                  (<%= due_date_distance_in_words(version.effective_date) %>)
+                <% end %>
+              <% end %>
+            </p>
+          <% end %>
+
+          <% if version.visible_fixed_issues.count > 0 %>
+            <%= progress_bar([version.visible_fixed_issues.closed_percent, version.visible_fixed_issues.completed_percent],
+                             :titles =>
+                               ["%s: %i%%" % [l(:label_closed_issues_plural), version.visible_fixed_issues.closed_percent],
+                                "%s: %i%%" % [l(:field_done_ratio), version.visible_fixed_issues.completed_percent]],
+                             :legend => ('%i%%' % version.visible_fixed_issues.completed_percent)) %>
+            <p class="progress-info">
+              <%= link_to(l(:label_x_issues, :count => version.visible_fixed_issues.count),
+                          project_issues_path(@project, :set_filter => 1, :fixed_version_id => version.id, :status_id => '*')) %>
+              &nbsp;
+              (<%= link_to_if(version.visible_fixed_issues.closed_count > 0,
+                              l(:label_x_closed_issues_abbr, :count => version.visible_fixed_issues.closed_count),
+                              project_issues_path(@project, :set_filter => 1, :fixed_version_id => version.id, :status_id => 'c')) %>
+              &#8212;
+              <%= link_to_if(version.visible_fixed_issues.open_count > 0,
+                             l(:label_x_open_issues_abbr, :count => version.visible_fixed_issues.open_count),
+                             project_issues_path(@project, :set_filter => 1, :fixed_version_id => version.id, :status_id => 'o')) %>)
+            </p>
+          <% else %>
+            <p class="progress-info"><%= l(:label_roadmap_no_issues) %></p>
+          <% end %>
+        </div>
+      </article>
+    <% end %>
+  </div>
+<% else %>
+  <p class="nodata"><%= l(:label_no_data) %></p>
+<% end %>
+
+<p><%= link_to l(:button_back), project_engagement_contracts_list_path(@project), class: 'icon icon-back' %></p>
+
+<% content_for :sidebar do %>
+  <h3><%= l(:label_engagement_summary) %></h3>
+  <ul>
+    <li><strong><%= l(:field_contract_number) %>:</strong> <%= @engagement_contract.contract_number %></li>
+    <li><strong><%= l(:field_contract_hours) %>:</strong> <%= format_contract_hours(@engagement_contract.contract_hours) %></li>
+    <li><strong><%= l(:label_version_plural) %>:</strong> <%= @versions.size %></li>
+    <li><strong><%= l(:label_open) %>:</strong> <%= @versions.select { |v| v.status == 'open' }.size %></li>
+    <li><strong><%= l(:label_closed) %>:</strong> <%= @versions.select { |v| v.status == 'closed' }.size %></li>
+  </ul>
+<% end %>

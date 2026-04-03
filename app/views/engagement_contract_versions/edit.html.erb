@@ -1,0 +1,7 @@
+<h2><%= l(:label_version_edit) %> - <%= link_to @engagement_contract.name, project_engagement_contract_path(@project, @engagement_contract) %></h2>
+
+<%= form_for @version, url: project_engagement_contract_version_path(@project, @engagement_contract, @version), method: :patch do |f| %>
+  <%= render partial: 'form', locals: { f: f } %>
+  <%= submit_tag l(:button_save) %>
+  <%= link_to l(:button_cancel), project_engagement_contract_path(@project, @engagement_contract) %>
+<% end %>

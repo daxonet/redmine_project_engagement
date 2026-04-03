@@ -1,0 +1,30 @@
+<div class="box tabular">
+  <p>
+    <label for="engagement_contract_name"><%= l(:field_name) %></label><span class="required"> *</span>
+    <%= f.text_field :name, size: 60, required: true %>
+  </p>
+  <p>
+    <label for="engagement_contract_contract_number"><%= l(:field_contract_number) %></label>
+    <%= f.text_field :contract_number, size: 40 %>
+  </p>
+  <p>
+    <label for="engagement_contract_contract_hours"><%= l(:field_contract_hours) %></label>
+    <%= f.number_field :contract_hours, step: 0.01, min: 0 %>
+    <em class="info"><%= l(:text_contract_hours_info) %></em>
+  </p>
+  <p>
+    <label for="engagement_contract_contract_date"><%= l(:field_contract_date) %></label>
+    <%= f.date_field :contract_date %>
+  </p>
+  <p>
+    <label for="engagement_contract_status"><%= l(:field_status) %></label>
+    <%= f.select :status, [
+      [l(:label_open), 'open'],
+      [l(:label_closed), 'closed']
+    ] %>
+  </p>
+  <p>
+    <label for="engagement_contract_description"><%= l(:field_description) %></label>
+    <%= f.text_area :description, rows: 5, cols: 60 %>
+  </p>
+</div>
