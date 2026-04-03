@@ -140,8 +140,9 @@ class EngagementDashboardController < ApplicationController
       Issue.open.where(fixed_version_id: p[:version_id], tracker_id: customization_tracker_id).exists?
     }
 
-    # Previous milestone: the phase right before current
+    # Previous milestone: the phase right before current (only if not 100%)
     prev_phase = current_idx && current_idx > 0 ? timeline_phases[current_idx - 1] : nil
+    prev_phase = nil if prev_phase && prev_phase[:progress].to_i >= 100
 
     # Build milestone detail cards
     milestone_cards = []
