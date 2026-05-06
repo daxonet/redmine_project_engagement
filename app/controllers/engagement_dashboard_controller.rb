@@ -204,7 +204,7 @@ class EngagementDashboardController < ApplicationController
   def build_phases
     today = Date.today
     @engagement_contract.sorted_versions.map do |v|
-      issues = Issue.where(fixed_version_id: v.id)
+      issues = v.fixed_issues
       progress = issues.count > 0 ? issues.completed_percent.round : 0
 
       status = if progress >= 100
